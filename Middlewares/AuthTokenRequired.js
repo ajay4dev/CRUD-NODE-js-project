@@ -1,27 +1,24 @@
-const mongoose = require("mongoose");
 const jwt = require("jsonwebtoken");
-const User = mongoose.model("User");
 
 module.exports = (req, res, next) => {
-    const { authorization} = req.headers;
-    
-    // console.log(authorization);
+    let token ;
 
-    if(!authorization) {
-        return res.status(401).send({ error: "No token provided" });
-    }
-    const taken  = authorization.replace("Bearer", "")
+    if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
+        try {
+          token = req.headers.authorization.split(" ")[1];
+          const decoded = jwt.verify(token, process.env.JWT_SECRET_KEY);
+          
+          req.user =  decoded;
 
-    // console.log(taken);
-    jwt.verify(token.process.env.JWT_SECRET_KEY, async (err, payload) =>{
-        if(err) {
-            return res.status(401).json({error:" tou must be looged in ,Token invalid"});
+          next();
+        } catch (error) {
+            return res.status(401).json({ message: 'Not authorized, token failed' });
+
         }
-        const {_id} = payload;
-        User.findById(_id).then(userdata => {
-            req.user = userdata;
-            next();
-        }) 
-    });
-    
+        
+    } else {
+        return res.status(401).json({ message: 'Not authorized, no token' });
+
+    }
+   
 }
